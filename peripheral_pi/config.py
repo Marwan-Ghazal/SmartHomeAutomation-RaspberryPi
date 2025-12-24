@@ -1,0 +1,28 @@
+# peripheral_pi/config.py
+
+# UART
+SERIAL_PORT = "/dev/serial0"
+SERIAL_BAUDRATE = 115200
+SERIAL_RECONNECT_DELAY_SEC = 2.0
+
+# GPIO (BCM numbering)
+PIR_PIN = 5
+LASER_PIN = 12
+
+# DHT11 uses board pin naming via Blinka
+DHT_MODEL = "DHT11"
+DHT_BOARD_PIN = "D4"  # GPIO4
+DHT_SAMPLE_SEC = 2.0
+
+# Stepper (28BYJ-48 + ULN2003)
+STEPPER_PINS = [17, 18, 27, 22]
+STEPPER_DELAY_SEC = 0.002
+STEPS_PER_REV = 2048
+
+# LCD (I2C)
+I2C_ADDR = 0x27
+LCD_WIDTH = 16
+LCD_UPDATE_SEC = 1.0
+
+# Reporting
+STATE_HZ = 2.0  # 2-5 Hz
