@@ -69,6 +69,9 @@ def main() -> None:
     )
     link.start()
 
+    def send_master_led_state(is_on: bool) -> None:
+        link.send({"t": "EVENT", "name": "MASTER_LED", "value": bool(is_on), "ts": now_ms()})
+
     def set_sound_flag(on: bool) -> None:
         with state.lock:
             state.sound_detected = on
@@ -79,9 +82,14 @@ def main() -> None:
         with state.lock:
             state.led_on = new_state
         print(f"[SOUND] Double clap -> LED {'ON' if new_state else 'OFF'}")
+        send_master_led_state(new_state)
 
     sound: Optional[DoubleClapDetector] = None
     if args.mode == "normal":
+        with state.lock:
+            state.led_on = False
+        send_master_led_state(False)
+
         sound = DoubleClapDetector(
             pin=config.SOUND_PIN,
             on_sound=set_sound_flag,

@@ -42,6 +42,12 @@ def main() -> None:
             link.send({"t": "PONG", "id": msg.get("id"), "ts": now_ms()})
             return
 
+        if t == "EVENT":
+            if msg.get("name") == "MASTER_LED":
+                with state.lock:
+                    state.master_led_on = bool(msg.get("value", False))
+            return
+
         if t != "CMD":
             return
 
@@ -112,6 +118,7 @@ def main() -> None:
                 t = state.temperature_c
                 h = state.humidity_pct
                 occ = "Occ" if state.motion else "Emp"
+                led = "LON" if state.master_led_on else "LOF"
                 win = "WON" if state.window_open else "WOF"
                 las = "LAS" if state.laser_on else "---"
                 alarm = "ALRT" if state.alarm else ""
@@ -119,7 +126,7 @@ def main() -> None:
             t_str = f"T:{t:.1f}C" if t is not None else "T:--.-C"
             h_str = f"H:{h:.0f}%" if h is not None else "H:--%"
             lcd.write_line(f"{t_str} {h_str}", I2cLcd.LCD_LINE_1)
-            lcd.write_line(f"{occ} {win} {las} {alarm}", I2cLcd.LCD_LINE_2)
+            lcd.write_line(f"{occ} {led} {win} {las} {alarm}", I2cLcd.LCD_LINE_2)
             time.sleep(config.LCD_UPDATE_SEC)
 
     def state_tx_loop() -> None:

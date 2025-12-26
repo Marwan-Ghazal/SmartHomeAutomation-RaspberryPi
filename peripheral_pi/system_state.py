@@ -12,6 +12,9 @@ class PeripheralState:
     humidity_pct: Optional[float] = None
     motion: bool = False
 
+    # Master (remote)
+    master_led_on: bool = False
+
     # Actuators
     window_open: bool = False
     laser_on: bool = False
