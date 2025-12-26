@@ -69,7 +69,6 @@ class DoubleClapDetector:
         except RuntimeError as e:
             # Final fallback: polling (never crash the master).
             self._using_edge_detect = False
-            print(f"[SOUND] Edge detect unavailable on GPIO{self._pin}: {e} -> fallback to polling")
             self._poll_thread = threading.Thread(target=self._poll_loop, name="SOUND_POLL", daemon=True)
             self._poll_thread.start()
 
