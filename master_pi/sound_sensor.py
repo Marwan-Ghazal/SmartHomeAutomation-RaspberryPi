@@ -31,10 +31,13 @@ class DoubleClapDetector:
         self._using_edge_detect = False
 
     def start(self) -> None:
-        # Many sound sensor modules have a floating digital output unless a pull is set.
-        GPIO.setup(self._pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+        # Ensure a clean state. Some kernels/drivers keep edge detect state if a previous
+        # process exited without cleanup.
+        try:
+            GPIO.cleanup(self._pin)
+        except Exception:
+            pass
 
-        # Best-effort cleanup in case a previous run left edge detection enabled.
         try:
             GPIO.remove_event_detect(self._pin)
         except Exception:
@@ -42,14 +45,29 @@ class DoubleClapDetector:
 
         self._poll_stop.clear()
 
+        # First attempt: match the user's working standalone test (no pull-up/down).
+        GPIO.setup(self._pin, GPIO.IN)
         try:
-            # Use the same bounce time as the user's working standalone test.
             GPIO.add_event_detect(self._pin, GPIO.RISING, bouncetime=50)
             GPIO.add_event_callback(self._pin, self._handle_rising_edge)
             self._using_edge_detect = True
+            return
+        except RuntimeError:
+            pass
+
+        # Second attempt: add a pull-down to stabilize floating inputs.
+        try:
+            try:
+                GPIO.remove_event_detect(self._pin)
+            except Exception:
+                pass
+            GPIO.setup(self._pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+            GPIO.add_event_detect(self._pin, GPIO.RISING, bouncetime=50)
+            GPIO.add_event_callback(self._pin, self._handle_rising_edge)
+            self._using_edge_detect = True
+            return
         except RuntimeError as e:
-            # If edge detect is not available for any reason, fall back to polling
-            # instead of crashing the whole master.
+            # Final fallback: polling (never crash the master).
             self._using_edge_detect = False
             print(f"[SOUND] Edge detect unavailable on GPIO{self._pin}: {e} -> fallback to polling")
             self._poll_thread = threading.Thread(target=self._poll_loop, name="SOUND_POLL", daemon=True)
