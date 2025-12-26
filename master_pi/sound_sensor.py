@@ -26,19 +26,60 @@ class DoubleClapDetector:
         self._last_clap_time = 0.0
         self._clap_count = 0
 
-    def start(self) -> None:
-        GPIO.setup(self._pin, GPIO.IN)
-        GPIO.add_event_detect(self._pin, GPIO.RISING, bouncetime=40)
-        GPIO.add_event_callback(self._pin, self._handle_rising_edge)
+        self._poll_stop = threading.Event()
+        self._poll_thread: threading.Thread | None = None
+        self._using_edge_detect = False
 
-    def stop(self) -> None:
+    def start(self) -> None:
+        # Many sound sensor modules have a floating digital output unless a pull is set.
+        GPIO.setup(self._pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+        # Best-effort cleanup in case a previous run left edge detection enabled.
         try:
             GPIO.remove_event_detect(self._pin)
         except Exception:
             pass
 
+        self._poll_stop.clear()
+
+        try:
+            # Use the same bounce time as the user's working standalone test.
+            GPIO.add_event_detect(self._pin, GPIO.RISING, bouncetime=50)
+            GPIO.add_event_callback(self._pin, self._handle_rising_edge)
+            self._using_edge_detect = True
+        except RuntimeError as e:
+            # If edge detect is not available for any reason, fall back to polling
+            # instead of crashing the whole master.
+            self._using_edge_detect = False
+            print(f"[SOUND] Edge detect unavailable on GPIO{self._pin}: {e} -> fallback to polling")
+            self._poll_thread = threading.Thread(target=self._poll_loop, name="SOUND_POLL", daemon=True)
+            self._poll_thread.start()
+
+    def stop(self) -> None:
+        self._poll_stop.set()
+        if self._poll_thread and self._poll_thread.is_alive():
+            self._poll_thread.join(timeout=0.5)
+
+        try:
+            GPIO.remove_event_detect(self._pin)
+        except Exception:
+            pass
+
+    def _poll_loop(self) -> None:
+        last = GPIO.input(self._pin)
+        while not self._poll_stop.is_set():
+            cur = GPIO.input(self._pin)
+            if cur == 1 and last == 0:
+                self._handle_rising_edge(self._pin)
+            last = cur
+            time.sleep(0.01)
+
     def _handle_rising_edge(self, _channel: int) -> None:
         now = time.time()
+
+        # Reset clap sequence if user waited too long between claps (matches test script).
+        if self._last_clap_time and (now - self._last_clap_time) > self._max_double_clap_time:
+            self._clap_count = 0
 
         # Filter tiny noise
         if now - self._last_clap_time < self._min_clap_interval:

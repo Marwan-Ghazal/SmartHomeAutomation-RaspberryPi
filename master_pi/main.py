@@ -80,12 +80,14 @@ def main() -> None:
             state.led_on = new_state
         print(f"[SOUND] Double clap -> LED {'ON' if new_state else 'OFF'}")
 
-    sound = DoubleClapDetector(
-        pin=config.SOUND_PIN,
-        on_sound=set_sound_flag,
-        on_double_clap=on_double_clap,
-    )
-    sound.start()
+    sound: Optional[DoubleClapDetector] = None
+    if args.mode == "normal":
+        sound = DoubleClapDetector(
+            pin=config.SOUND_PIN,
+            on_sound=set_sound_flag,
+            on_double_clap=on_double_clap,
+        )
+        sound.start()
 
     def alarm_worker() -> None:
         # Alarm pattern runs locally on Master (buzzer is on Master)
@@ -142,7 +144,8 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        sound.stop()
+        if sound is not None:
+            sound.stop()
         link.stop()
         GPIO.cleanup()
         print("[MASTER] Stopped.")
