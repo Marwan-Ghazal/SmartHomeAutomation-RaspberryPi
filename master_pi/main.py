@@ -9,6 +9,7 @@ import RPi.GPIO as GPIO
 
 import config
 from gpio_devices import Buzzer, Led
+from mqtt_gateway import MqttGateway
 from sound_sensor import DoubleClapDetector
 from system_state import state
 from uart_link import SerialLink
@@ -72,6 +73,65 @@ def main() -> None:
     def send_master_led_state(is_on: bool) -> None:
         link.send({"t": "EVENT", "name": "MASTER_LED", "value": bool(is_on), "ts": now_ms()})
 
+    def on_mqtt_command(path: str, payload: object) -> None:
+        obj = payload if isinstance(payload, dict) else {}
+
+        if path == "master/led":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                led.set(on)
+                with state.lock:
+                    state.led_on = on
+                send_master_led_state(on)
+            return
+
+        if path == "master/alarm":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                if on:
+                    ensure_alarm_started()
+                else:
+                    with state.lock:
+                        state.alarm_active = False
+                    link.send({"t": "CMD", "name": "ALARM", "value": False})
+            return
+
+        if path == "peripheral/window":
+            action = obj.get("action")
+            if action in {"OPEN", "CLOSE"}:
+                link.send({"t": "CMD", "name": "WINDOW", "value": action})
+            return
+
+        if path == "peripheral/laser":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                link.send({"t": "CMD", "name": "LASER", "value": on})
+            return
+
+        if path == "peripheral/alarm":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                link.send({"t": "CMD", "name": "ALARM", "value": on})
+            return
+
+    mqtt = MqttGateway(
+        host=config.MQTT_HOST,
+        port=config.MQTT_PORT,
+        keepalive_sec=config.MQTT_KEEPALIVE_SEC,
+        base_topic=config.MQTT_BASE_TOPIC,
+        on_command=on_mqtt_command,
+    )
+    mqtt.start()
+
+    def mqtt_state_loop() -> None:
+        while True:
+            with state.lock:
+                snapshot = state.to_dict()
+            mqtt.publish_state(snapshot)
+            time.sleep(0.5)
+
+    threading.Thread(target=mqtt_state_loop, name="MQTT_STATE", daemon=True).start()
+
     def set_sound_flag(on: bool) -> None:
         with state.lock:
             state.sound_detected = on
@@ -83,6 +143,7 @@ def main() -> None:
             state.led_on = new_state
         print(f"[SOUND] Double clap -> LED {'ON' if new_state else 'OFF'}")
         send_master_led_state(new_state)
+        mqtt.publish_event("double_clap_led", {"on": new_state})
 
     sound: Optional[DoubleClapDetector] = None
     if args.mode == "normal":
@@ -154,6 +215,7 @@ def main() -> None:
     finally:
         if sound is not None:
             sound.stop()
+        mqtt.stop()
         link.stop()
         GPIO.cleanup()
         print("[MASTER] Stopped.")

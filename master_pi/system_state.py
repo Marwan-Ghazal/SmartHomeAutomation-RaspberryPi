@@ -25,5 +25,19 @@ class SystemState:
 
     lock: threading.Lock = field(default_factory=threading.Lock, repr=False)
 
+    def to_dict(self) -> dict:
+        return {
+            "led_on": self.led_on,
+            "buzzer_on": self.buzzer_on,
+            "sound_detected": self.sound_detected,
+            "temperature_c": self.temperature_c,
+            "humidity_pct": self.humidity_pct,
+            "motion": self.motion,
+            "window_open": self.window_open,
+            "laser_on": self.laser_on,
+            "peripheral_alarm": self.peripheral_alarm,
+            "alarm_active": self.alarm_active,
+        }
+
 
 state = SystemState()
