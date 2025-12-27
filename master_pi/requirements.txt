@@ -2,6 +2,5 @@ pyserial>=3.5
 RPi.GPIO>=0.7.1
 paho-mqtt>=1.6.1
 Flask>=2.2
-flask 
-utils
+
 
