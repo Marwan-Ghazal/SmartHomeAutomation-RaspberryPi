@@ -27,6 +27,8 @@ function updatePill(element, isOn, onText, offText, alert = false) {
 }
 
 function renderState(data) {
+  data = applyPendingModes(data);
+
   // Temperature
   const tempText = document.getElementById("temp-text");
   const tempBar = document.getElementById("temp-bar");
@@ -94,6 +96,36 @@ function startPolling() {
   if (pollingStarted) return;
   pollingStarted = true;
   setInterval(fetchState, 1000);
+}
+
+let pendingModes = null;
+let pendingUntilMs = 0;
+
+function setPendingModes(partial) {
+  const now = Date.now();
+  pendingModes = { ...(pendingModes || {}), ...partial };
+  pendingUntilMs = now + 800;
+}
+
+function applyPendingModes(data) {
+  const now = Date.now();
+  if (!pendingModes || now > pendingUntilMs) {
+    pendingModes = null;
+    pendingUntilMs = 0;
+    return data;
+  }
+
+  const merged = { ...data, ...pendingModes };
+
+  const keys = Object.keys(pendingModes);
+  const confirmed = keys.every((k) => data[k] === pendingModes[k]);
+  if (confirmed) {
+    pendingModes = null;
+    pendingUntilMs = 0;
+    return data;
+  }
+
+  return merged;
 }
 
 function startSseState() {
@@ -171,22 +203,28 @@ function setupControls() {
 
   if (swClap) {
     swClap.addEventListener("change", async () => {
-      await apiPost("/api/mode/clap_toggle", { on: swClap.checked });
-      fetchState();
+      const on = swClap.checked;
+      setPendingModes({ clap_toggle_enabled: on, sound_led_mode_enabled: on ? false : undefined });
+      await apiPost("/api/mode/clap_toggle", { on });
+      setTimeout(fetchState, 900);
     });
   }
 
   if (swSound) {
     swSound.addEventListener("change", async () => {
-      await apiPost("/api/mode/sound_led", { on: swSound.checked });
-      fetchState();
+      const on = swSound.checked;
+      setPendingModes({ sound_led_mode_enabled: on, clap_toggle_enabled: on ? false : undefined });
+      await apiPost("/api/mode/sound_led", { on });
+      setTimeout(fetchState, 900);
     });
   }
 
   if (swMotion) {
     swMotion.addEventListener("change", async () => {
-      await apiPost("/api/mode/motion_led", { on: swMotion.checked });
-      fetchState();
+      const on = swMotion.checked;
+      setPendingModes({ motion_led_mode_enabled: on });
+      await apiPost("/api/mode/motion_led", { on });
+      setTimeout(fetchState, 900);
     });
   }
 }
