@@ -22,63 +22,101 @@ function updatePill(element, isOn, onText, offText, alert = false) {
   }
 }
 
+function renderState(data) {
+  // Temperature
+  const tempText = document.getElementById("temp-text");
+  const tempBar = document.getElementById("temp-bar");
+  if (data.temperature !== null) {
+    tempText.textContent = data.temperature.toFixed(1) + " deg C";
+    const t = Math.max(0, Math.min(40, data.temperature));
+    tempBar.style.width = String((t / 40) * 100) + "%";
+  } else {
+    tempText.textContent = "-- deg C";
+    tempBar.style.width = "0%";
+  }
+
+  // Humidity
+  const humText = document.getElementById("hum-text");
+  const humBar = document.getElementById("hum-bar");
+  if (data.humidity !== null) {
+    humText.textContent = data.humidity.toFixed(1) + " %";
+    const h = Math.max(0, Math.min(100, data.humidity));
+    humBar.style.width = String(h) + "%";
+  } else {
+    humText.textContent = "-- %";
+    humBar.style.width = "0%";
+  }
+
+  // Motion / sound / alarm
+  const motionPill = document.getElementById("motion-pill");
+  const soundPill = document.getElementById("sound-pill");
+  const alarmPill = document.getElementById("alarm-pill");
+
+  updatePill(motionPill, data.motion, "Motion detected", "No motion");
+  updatePill(soundPill, data.sound_detected, "Sound detected", "Quiet");
+  updatePill(alarmPill, data.alarm_active, "Alarm active", "Inactive", data.alarm_active);
+
+  // Buttons
+  const btnLed = document.getElementById("btn-led");
+  const btnLaser = document.getElementById("btn-laser");
+
+  if (data.led_on) {
+    btnLed.classList.add("btn-active");
+    btnLed.textContent = "LED: ON";
+  } else {
+    btnLed.classList.remove("btn-active");
+    btnLed.textContent = "LED: OFF";
+  }
+
+  if (data.laser_on) {
+    btnLaser.classList.add("btn-active");
+    btnLaser.textContent = "Laser: ON";
+  } else {
+    btnLaser.classList.remove("btn-active");
+    btnLaser.textContent = "Laser: OFF";
+  }
+}
+
+let pollingStarted = false;
+function startPolling() {
+  if (pollingStarted) return;
+  pollingStarted = true;
+  setInterval(fetchState, 1000);
+}
+
+function startSseState() {
+  try {
+    const es = new EventSource("/api/stream");
+
+    es.addEventListener("state", (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        renderState(data);
+      } catch (e) {
+        // ignore
+      }
+    });
+
+    es.onerror = () => {
+      try {
+        es.close();
+      } catch (e) {
+        // ignore
+      }
+      startPolling();
+    };
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function fetchState() {
   try {
     const res = await fetch("/api/state");
     const data = await res.json();
-
-    // Temperature
-    const tempText = document.getElementById("temp-text");
-    const tempBar = document.getElementById("temp-bar");
-    if (data.temperature !== null) {
-      tempText.textContent = data.temperature.toFixed(1) + " deg C";
-      const t = Math.max(0, Math.min(40, data.temperature));
-      tempBar.style.width = String((t / 40) * 100) + "%";
-    } else {
-      tempText.textContent = "-- deg C";
-      tempBar.style.width = "0%";
-    }
-
-    // Humidity
-    const humText = document.getElementById("hum-text");
-    const humBar = document.getElementById("hum-bar");
-    if (data.humidity !== null) {
-      humText.textContent = data.humidity.toFixed(1) + " %";
-      const h = Math.max(0, Math.min(100, data.humidity));
-      humBar.style.width = String(h) + "%";
-    } else {
-      humText.textContent = "-- %";
-      humBar.style.width = "0%";
-    }
-
-    // Motion / sound / alarm
-    const motionPill = document.getElementById("motion-pill");
-    const soundPill = document.getElementById("sound-pill");
-    const alarmPill = document.getElementById("alarm-pill");
-
-    updatePill(motionPill, data.motion, "Motion detected", "No motion");
-    updatePill(soundPill, data.sound_detected, "Sound detected", "Quiet");
-    updatePill(alarmPill, data.alarm_active, "Alarm active", "Inactive", data.alarm_active);
-
-    // Buttons
-    const btnLed = document.getElementById("btn-led");
-    const btnLaser = document.getElementById("btn-laser");
-
-    if (data.led_on) {
-      btnLed.classList.add("btn-active");
-      btnLed.textContent = "LED: ON";
-    } else {
-      btnLed.classList.remove("btn-active");
-      btnLed.textContent = "LED: OFF";
-    }
-
-    if (data.laser_on) {
-      btnLaser.classList.add("btn-active");
-      btnLaser.textContent = "Laser: ON";
-    } else {
-      btnLaser.classList.remove("btn-active");
-      btnLaser.textContent = "Laser: OFF";
-    }
+    renderState(data);
 
   } catch (err) {
     console.error("Error fetching state:", err);
@@ -119,5 +157,8 @@ function setupControls() {
 document.addEventListener("DOMContentLoaded", () => {
   setupControls();
   fetchState();
-  setInterval(fetchState, 1000); // live updates every second
+  const ok = startSseState();
+  if (!ok) {
+    startPolling();
+  }
 });
