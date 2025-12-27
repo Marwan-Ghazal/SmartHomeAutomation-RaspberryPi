@@ -75,15 +75,36 @@
       <h2>Modes</h2>
       <div class="status-row">
         <span>Clap toggles LED</span>
-        <input id="sw-clap" type="checkbox" />
+        <label class="toggle">
+          <input id="sw-clap" class="toggle-input" type="checkbox" />
+          <span class="toggle-track">
+            <span class="toggle-label toggle-label-on">ON</span>
+            <span class="toggle-label toggle-label-off">OFF</span>
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
       </div>
       <div class="status-row">
         <span>Any sound -> LED ON (5s)</span>
-        <input id="sw-sound" type="checkbox" />
+        <label class="toggle">
+          <input id="sw-sound" class="toggle-input" type="checkbox" />
+          <span class="toggle-track">
+            <span class="toggle-label toggle-label-on">ON</span>
+            <span class="toggle-label toggle-label-off">OFF</span>
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
       </div>
       <div class="status-row">
         <span>Motion -> LED ON (10s)</span>
-        <input id="sw-motion" type="checkbox" />
+        <label class="toggle">
+          <input id="sw-motion" class="toggle-input" type="checkbox" />
+          <span class="toggle-track">
+            <span class="toggle-label toggle-label-on">ON</span>
+            <span class="toggle-label toggle-label-off">OFF</span>
+            <span class="toggle-thumb"></span>
+          </span>
+        </label>
       </div>
       <p class="hint">Clap toggle and sound mode cannot be active at the same time.</p>
     </section>
