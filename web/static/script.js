@@ -1,10 +1,14 @@
 // web/static/script.js
 
-async function apiPost(url) {
-  const res = await fetch(url, {
+async function apiPost(url, body = null) {
+  const opts = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-  });
+  };
+  if (body !== null) {
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch(url, opts);
   return res.json();
 }
 
@@ -60,6 +64,10 @@ function renderState(data) {
   const btnLed = document.getElementById("btn-led");
   const btnLaser = document.getElementById("btn-laser");
 
+  const swClap = document.getElementById("sw-clap");
+  const swSound = document.getElementById("sw-sound");
+  const swMotion = document.getElementById("sw-motion");
+
   if (data.led_on) {
     btnLed.classList.add("btn-active");
     btnLed.textContent = "LED: ON";
@@ -75,6 +83,10 @@ function renderState(data) {
     btnLaser.classList.remove("btn-active");
     btnLaser.textContent = "Laser: OFF";
   }
+
+  if (swClap) swClap.checked = !!data.clap_toggle_enabled;
+  if (swSound) swSound.checked = !!data.sound_led_mode_enabled;
+  if (swMotion) swMotion.checked = !!data.motion_led_mode_enabled;
 }
 
 let pollingStarted = false;
@@ -130,6 +142,10 @@ function setupControls() {
   const btnOpenWindow = document.getElementById("btn-open-window");
   const btnCloseWindow = document.getElementById("btn-close-window");
 
+  const swClap = document.getElementById("sw-clap");
+  const swSound = document.getElementById("sw-sound");
+  const swMotion = document.getElementById("sw-motion");
+
   btnLed.addEventListener("click", async () => {
     await apiPost("/api/toggle_led");
     fetchState();
@@ -152,6 +168,27 @@ function setupControls() {
   btnCloseWindow.addEventListener("click", async () => {
     await apiPost("/api/close_window");
   });
+
+  if (swClap) {
+    swClap.addEventListener("change", async () => {
+      await apiPost("/api/mode/clap_toggle", { on: swClap.checked });
+      fetchState();
+    });
+  }
+
+  if (swSound) {
+    swSound.addEventListener("change", async () => {
+      await apiPost("/api/mode/sound_led", { on: swSound.checked });
+      fetchState();
+    });
+  }
+
+  if (swMotion) {
+    swMotion.addEventListener("change", async () => {
+      await apiPost("/api/mode/motion_led", { on: swMotion.checked });
+      fetchState();
+    });
+  }
 }
 
 document.addEventListener("DOMContentLoaded", () => {

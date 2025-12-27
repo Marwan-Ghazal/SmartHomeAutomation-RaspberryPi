@@ -73,16 +73,90 @@ def main() -> None:
     def send_master_led_state(is_on: bool) -> None:
         link.send({"t": "EVENT", "name": "MASTER_LED", "value": bool(is_on), "ts": now_ms()})
 
+    timed_led_lock = threading.Lock()
+    timed_led_token = 0
+
+    def cancel_timed_led() -> None:
+        nonlocal timed_led_token
+        with timed_led_lock:
+            timed_led_token += 1
+
+    def start_timed_led(duration_s: float) -> None:
+        nonlocal timed_led_token
+        with timed_led_lock:
+            timed_led_token += 1
+            token = timed_led_token
+
+        def worker() -> None:
+            led.set(True)
+            with state.lock:
+                state.led_on = True
+            send_master_led_state(True)
+            mqtt.publish_event("timed_led_on", {"seconds": duration_s})
+
+            end_at = time.time() + duration_s
+            while time.time() < end_at:
+                with timed_led_lock:
+                    if token != timed_led_token:
+                        return
+                time.sleep(0.05)
+
+            with timed_led_lock:
+                if token != timed_led_token:
+                    return
+
+            led.set(False)
+            with state.lock:
+                state.led_on = False
+            send_master_led_state(False)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def set_modes(*, clap: Optional[bool] = None, sound: Optional[bool] = None, motion: Optional[bool] = None) -> None:
+        # Clap toggle and Sound LED mode are mutually exclusive.
+        with state.lock:
+            if clap is not None:
+                state.clap_toggle_enabled = bool(clap)
+                if state.clap_toggle_enabled:
+                    state.sound_led_mode_enabled = False
+
+            if sound is not None:
+                state.sound_led_mode_enabled = bool(sound)
+                if state.sound_led_mode_enabled:
+                    state.clap_toggle_enabled = False
+
+            if motion is not None:
+                state.motion_led_mode_enabled = bool(motion)
+
     def on_mqtt_command(path: str, payload: object) -> None:
         obj = payload if isinstance(payload, dict) else {}
 
         if path == "master/led":
             on = obj.get("on")
             if isinstance(on, bool):
+                cancel_timed_led()
                 led.set(on)
                 with state.lock:
                     state.led_on = on
                 send_master_led_state(on)
+            return
+
+        if path == "master/mode/clap_toggle":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                set_modes(clap=on)
+            return
+
+        if path == "master/mode/sound_led":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                set_modes(sound=on)
+            return
+
+        if path == "master/mode/motion_led":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                set_modes(motion=on)
             return
 
         if path == "master/alarm":
@@ -136,7 +210,17 @@ def main() -> None:
         with state.lock:
             state.sound_detected = on
 
+        if on:
+            with state.lock:
+                sound_mode = state.sound_led_mode_enabled
+            if sound_mode:
+                start_timed_led(5.0)
+
     def on_double_clap() -> None:
+        with state.lock:
+            enabled = state.clap_toggle_enabled
+        if not enabled:
+            return
         new_state = led.toggle()
         threading.Thread(target=buzzer.beep, args=(0.15,), daemon=True).start()
         with state.lock:
@@ -157,6 +241,23 @@ def main() -> None:
             on_double_clap=on_double_clap,
         )
         sound.start()
+
+    last_motion = False
+
+    def motion_led_loop() -> None:
+        nonlocal last_motion
+        while True:
+            with state.lock:
+                enabled = state.motion_led_mode_enabled
+                motion = bool(state.motion)
+
+            if enabled and motion and not last_motion:
+                start_timed_led(10.0)
+
+            last_motion = motion
+            time.sleep(0.05)
+
+    threading.Thread(target=motion_led_loop, name="MOTION_LED", daemon=True).start()
 
     def alarm_worker() -> None:
         # Alarm pattern runs locally on Master (buzzer is on Master)

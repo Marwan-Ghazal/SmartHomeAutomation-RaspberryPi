@@ -12,6 +12,11 @@ class SystemState:
     buzzer_on: bool = False
     sound_detected: bool = False
 
+    # Modes (controlled from website)
+    clap_toggle_enabled: bool = True
+    sound_led_mode_enabled: bool = False
+    motion_led_mode_enabled: bool = False
+
     # Remote (Peripheral Pi)
     temperature_c: Optional[float] = None
     humidity_pct: Optional[float] = None
@@ -30,6 +35,9 @@ class SystemState:
             "led_on": self.led_on,
             "buzzer_on": self.buzzer_on,
             "sound_detected": self.sound_detected,
+            "clap_toggle_enabled": self.clap_toggle_enabled,
+            "sound_led_mode_enabled": self.sound_led_mode_enabled,
+            "motion_led_mode_enabled": self.motion_led_mode_enabled,
             "temperature_c": self.temperature_c,
             "humidity_pct": self.humidity_pct,
             "motion": self.motion,

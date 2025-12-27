@@ -5,7 +5,7 @@ import threading
 from typing import Any, Dict, Optional
 
 import paho.mqtt.client as mqtt
-from flask import Flask, Response, jsonify, render_template
+from flask import Flask, Response, jsonify, render_template, request
 
 try:
     from master_pi import config as master_config
@@ -51,6 +51,9 @@ def api_state():
         "laser_on": bool(s.get("laser_on", False)),
         "window_open": bool(s.get("window_open", False)),
         "alarm_active": bool(s.get("alarm_active", False)),
+        "clap_toggle_enabled": bool(s.get("clap_toggle_enabled", True)),
+        "sound_led_mode_enabled": bool(s.get("sound_led_mode_enabled", False)),
+        "motion_led_mode_enabled": bool(s.get("motion_led_mode_enabled", False)),
     }
     return jsonify(data)
 
@@ -85,6 +88,9 @@ def api_stream():
                 "laser_on": bool(payload.get("laser_on", False)),
                 "window_open": bool(payload.get("window_open", False)),
                 "alarm_active": bool(payload.get("alarm_active", False)),
+                "clap_toggle_enabled": bool(payload.get("clap_toggle_enabled", True)),
+                "sound_led_mode_enabled": bool(payload.get("sound_led_mode_enabled", False)),
+                "motion_led_mode_enabled": bool(payload.get("motion_led_mode_enabled", False)),
             }
             yield f"event: state\ndata: {json.dumps(data)}\n\n"
 
@@ -101,6 +107,51 @@ def api_toggle_led():
         return jsonify({"led_on": new_state})
     except Exception as e:
         print("ERROR in /api/toggle_led:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/mode/clap_toggle", methods=["POST"])
+def api_mode_clap_toggle():
+    try:
+        _ensure_mqtt_started()
+        body = request.get_json(silent=True) or {}
+        on = body.get("on")
+        if not isinstance(on, bool):
+            return jsonify({"error": "missing boolean 'on'"}), 400
+        _mqtt_publish_cmd("master/mode/clap_toggle", {"on": on})
+        return jsonify({"clap_toggle_enabled": on})
+    except Exception as e:
+        print("ERROR in /api/mode/clap_toggle:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/mode/sound_led", methods=["POST"])
+def api_mode_sound_led():
+    try:
+        _ensure_mqtt_started()
+        body = request.get_json(silent=True) or {}
+        on = body.get("on")
+        if not isinstance(on, bool):
+            return jsonify({"error": "missing boolean 'on'"}), 400
+        _mqtt_publish_cmd("master/mode/sound_led", {"on": on})
+        return jsonify({"sound_led_mode_enabled": on})
+    except Exception as e:
+        print("ERROR in /api/mode/sound_led:", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/mode/motion_led", methods=["POST"])
+def api_mode_motion_led():
+    try:
+        _ensure_mqtt_started()
+        body = request.get_json(silent=True) or {}
+        on = body.get("on")
+        if not isinstance(on, bool):
+            return jsonify({"error": "missing boolean 'on'"}), 400
+        _mqtt_publish_cmd("master/mode/motion_led", {"on": on})
+        return jsonify({"motion_led_mode_enabled": on})
+    except Exception as e:
+        print("ERROR in /api/mode/motion_led:", e)
         return jsonify({"error": str(e)}), 500
 
 
