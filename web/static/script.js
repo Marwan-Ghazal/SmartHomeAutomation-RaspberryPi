@@ -12,6 +12,33 @@ async function apiPost(url, body = null) {
   return res.json();
 }
 
+let lastFlameDetected = false;
+let lastFireModalAtMs = 0;
+
+function openFireModal() {
+  const modal = document.getElementById("fire-modal");
+  if (!modal) return;
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeFireModal() {
+  const modal = document.getElementById("fire-modal");
+  if (!modal) return;
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function maybeShowFireModal() {
+  const now = Date.now();
+  const cooldownOk = now - lastFireModalAtMs > 5000;
+  if (!lastFlameDetected && cooldownOk) {
+    openFireModal();
+    lastFireModalAtMs = now;
+  }
+  lastFlameDetected = true;
+}
+
 function updatePill(element, isOn, onText, offText, alert = false) {
   element.classList.remove("pill-on", "pill-off", "pill-alert");
   if (alert) {
@@ -56,11 +83,19 @@ function renderState(data) {
   // Motion / sound / alarm
   const motionPill = document.getElementById("motion-pill");
   const soundPill = document.getElementById("sound-pill");
+  const flamePill = document.getElementById("flame-pill");
   const alarmPill = document.getElementById("alarm-pill");
 
   updatePill(motionPill, data.motion, "Motion detected", "No motion");
   updatePill(soundPill, data.sound_detected, "Sound detected", "Quiet");
+  if (flamePill) updatePill(flamePill, data.flame_detected, "FIRE!", "Safe", data.flame_detected);
   updatePill(alarmPill, data.alarm_active, "Alarm active", "Inactive", data.alarm_active);
+
+  if (data.flame_detected) {
+    maybeShowFireModal();
+  } else {
+    lastFlameDetected = false;
+  }
 
   // Buttons
   const btnLed = document.getElementById("btn-led");
@@ -173,6 +208,13 @@ function setupControls() {
   const btnStopBuzzer = document.getElementById("btn-stop-buzzer");
   const btnOpenWindow = document.getElementById("btn-open-window");
   const btnCloseWindow = document.getElementById("btn-close-window");
+
+  const btnFireClose = document.getElementById("btn-fire-close");
+  if (btnFireClose) {
+    btnFireClose.addEventListener("click", () => {
+      closeFireModal();
+    });
+  }
 
   const swClap = document.getElementById("sw-clap");
   const swSound = document.getElementById("sw-sound");

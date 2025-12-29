@@ -48,6 +48,10 @@
         <span id="sound-pill" class="pill pill-off">Quiet</span>
       </div>
       <div class="status-row">
+        <span>Fire</span>
+        <span id="flame-pill" class="pill pill-off">Safe</span>
+      </div>
+      <div class="status-row">
         <span>Alarm</span>
         <span id="alarm-pill" class="pill pill-off">Inactive</span>
       </div>
@@ -109,6 +113,16 @@
       <p class="hint">Clap toggle and sound mode cannot be active at the same time.</p>
     </section>
   </main>
+</div>
+
+<div id="fire-modal" class="modal-backdrop" aria-hidden="true">
+  <div class="modal">
+    <div class="modal-title">Fire detected</div>
+    <div class="modal-body">A flame was detected. The buzzer alarm will run for 30 seconds.</div>
+    <div class="modal-actions">
+      <button id="btn-fire-close" class="btn btn-danger">Close</button>
+    </div>
+  </div>
 </div>
 
 <script src="{{ url_for('static', filename='script.js') }}"></script>

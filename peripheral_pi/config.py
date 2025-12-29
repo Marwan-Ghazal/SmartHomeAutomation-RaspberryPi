@@ -26,3 +26,7 @@ LCD_UPDATE_SEC = 1.0
 
 # Reporting
 STATE_HZ = 2.0  # 2-5 Hz
+
+FLAME_PIN = 16
+FLAME_ACTIVE_LOW = True
+FLAME_POLL_SEC = 0.1

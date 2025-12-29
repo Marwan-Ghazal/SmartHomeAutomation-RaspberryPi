@@ -21,6 +21,7 @@ class SystemState:
     temperature_c: Optional[float] = None
     humidity_pct: Optional[float] = None
     motion: bool = False
+    flame_detected: bool = False
     window_open: bool = False
     laser_on: bool = False
     peripheral_alarm: bool = False
@@ -41,6 +42,7 @@ class SystemState:
             "temperature_c": self.temperature_c,
             "humidity_pct": self.humidity_pct,
             "motion": self.motion,
+            "flame_detected": self.flame_detected,
             "window_open": self.window_open,
             "laser_on": self.laser_on,
             "peripheral_alarm": self.peripheral_alarm,

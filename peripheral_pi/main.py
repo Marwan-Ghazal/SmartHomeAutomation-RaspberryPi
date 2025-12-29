@@ -10,7 +10,7 @@ import RPi.GPIO as GPIO
 import config
 from devices import Laser, StepperWindow
 from lcd import I2cLcd
-from sensors import dht_loop, make_dht_reader, pir_loop
+from sensors import dht_loop, flame_loop, make_dht_reader, pir_loop
 from system_state import state
 from uart_link import SerialLink
 
@@ -100,6 +100,10 @@ def main() -> None:
         if changed:
             link.send({"t": "EVENT", "name": "MOTION", "value": motion, "ts": now_ms()})
 
+    def set_flame(flame: bool) -> None:
+        with state.lock:
+            state.flame_detected = bool(flame)
+
     def set_dht(t_c, h_pct) -> None:
         with state.lock:
             if t_c is not None:
@@ -111,6 +115,12 @@ def main() -> None:
 
     threading.Thread(target=pir_loop, args=(config.PIR_PIN, set_motion), daemon=True).start()
     threading.Thread(target=dht_loop, args=(config.DHT_SAMPLE_SEC, dht_read_once, set_dht), daemon=True).start()
+    threading.Thread(
+        target=flame_loop,
+        args=(config.FLAME_PIN, set_flame),
+        kwargs={"active_low": config.FLAME_ACTIVE_LOW, "poll_sec": config.FLAME_POLL_SEC},
+        daemon=True,
+    ).start()
 
     def lcd_loop() -> None:
         while True:
@@ -139,6 +149,7 @@ def main() -> None:
                     "temperature_c": state.temperature_c,
                     "humidity_pct": state.humidity_pct,
                     "motion": state.motion,
+                    "flame_detected": state.flame_detected,
                     "window_open": state.window_open,
                     "laser_on": state.laser_on,
                     "alarm": state.alarm,

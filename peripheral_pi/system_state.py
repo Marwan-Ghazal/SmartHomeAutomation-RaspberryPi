@@ -11,6 +11,7 @@ class PeripheralState:
     temperature_c: Optional[float] = None
     humidity_pct: Optional[float] = None
     motion: bool = False
+    flame_detected: bool = False
 
     # Master (remote)
     master_led_on: bool = False

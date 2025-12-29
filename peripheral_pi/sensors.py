@@ -14,6 +14,16 @@ def pir_loop(pin: int, on_motion: Callable[[bool], None]) -> None:
         time.sleep(0.1)
 
 
+def flame_loop(pin: int, on_flame: Callable[[bool], None], *, active_low: bool = True, poll_sec: float = 0.1) -> None:
+    pud = GPIO.PUD_UP if active_low else GPIO.PUD_DOWN
+    GPIO.setup(pin, GPIO.IN, pull_up_down=pud)
+    while True:
+        val = GPIO.input(pin)
+        flame = (val == 0) if active_low else (val == 1)
+        on_flame(flame)
+        time.sleep(poll_sec)
+
+
 def make_dht_reader(model: str, board_pin: str):
     import board
     import adafruit_dht

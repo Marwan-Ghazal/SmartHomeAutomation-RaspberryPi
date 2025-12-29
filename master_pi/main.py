@@ -53,6 +53,7 @@ def main() -> None:
                 state.temperature_c = msg.get("temperature_c")
                 state.humidity_pct = msg.get("humidity_pct")
                 state.motion = bool(msg.get("motion", False))
+                state.flame_detected = bool(msg.get("flame_detected", False))
                 state.window_open = bool(msg.get("window_open", False))
                 state.laser_on = bool(msg.get("laser_on", False))
                 state.peripheral_alarm = bool(msg.get("alarm", False))
@@ -167,6 +168,7 @@ def main() -> None:
                 else:
                     with state.lock:
                         state.alarm_active = False
+                        state.buzzer_on = False
                     link.send({"t": "CMD", "name": "ALARM", "value": False})
             return
 
@@ -261,6 +263,8 @@ def main() -> None:
 
     def alarm_worker() -> None:
         # Alarm pattern runs locally on Master (buzzer is on Master)
+        with state.lock:
+            state.buzzer_on = True
         start = time.time()
         while time.time() - start < config.ALARM_BEEP_SECONDS:
             with state.lock:
@@ -271,6 +275,7 @@ def main() -> None:
 
         with state.lock:
             state.alarm_active = False
+            state.buzzer_on = False
 
         # Tell peripheral to clear LCD alert
         link.send({"t": "CMD", "name": "ALARM", "value": False})
@@ -284,6 +289,24 @@ def main() -> None:
         link.send({"t": "CMD", "name": "ALARM", "value": True})
         link.send({"t": "CMD", "name": "WINDOW", "value": "OPEN"})
         threading.Thread(target=alarm_worker, daemon=True).start()
+
+    last_flame = False
+
+    def flame_alarm_loop() -> None:
+        nonlocal last_flame
+        while True:
+            with state.lock:
+                flame = bool(state.flame_detected)
+
+            if flame and not last_flame:
+                print("[AUTO] Flame detected -> alarm")
+                ensure_alarm_started()
+                mqtt.publish_event("flame_detected", {"on": True})
+
+            last_flame = flame
+            time.sleep(0.05)
+
+    threading.Thread(target=flame_alarm_loop, name="FLAME_ALARM", daemon=True).start()
 
     print("[MASTER] Running.")
     print(f"[MASTER] UART: {config.SERIAL_PORT} @ {config.SERIAL_BAUDRATE}")
