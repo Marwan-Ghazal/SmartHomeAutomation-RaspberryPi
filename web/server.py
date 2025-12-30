@@ -1,11 +1,16 @@
  # web/server.py
 import json
 import os
+import sys
 import threading
 from typing import Any, Dict, Optional
 
 import paho.mqtt.client as mqtt
 from flask import Flask, Response, jsonify, render_template, request
+
+_PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if _PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT)
 
 try:
     from master_pi import config as master_config

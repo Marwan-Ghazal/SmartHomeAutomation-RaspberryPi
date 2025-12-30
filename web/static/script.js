@@ -380,7 +380,8 @@ function setupFaceUnlock() {
         statusText.innerText = `Access GRANTED: ${result.name}`;
         statusText.style.color = "green";
       } else {
-        statusText.innerText = `Access DENIED: ${result.error || "Unknown"}`;
+        const extra = result && result._http_status === 503 && result.detail ? ` (${result.detail})` : "";
+        statusText.innerText = `Access DENIED: ${result.error || "Unknown"}${extra}`;
         statusText.style.color = "red";
       }
     } catch (e) {
