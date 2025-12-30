@@ -9,7 +9,16 @@ async function apiPost(url, body = null) {
     opts.body = JSON.stringify(body);
   }
   const res = await fetch(url, opts);
-  return res.json();
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {
+    data = {};
+  }
+  if (!res.ok) {
+    return { ...data, _http_status: res.status };
+  }
+  return data;
 }
 
 let lastFlameDetected = false;
@@ -273,7 +282,10 @@ function setupControls() {
 
   if (btnLockDoor) {
     btnLockDoor.addEventListener("click", async () => {
-      await apiPost("/api/lock_door");
+      const res = await apiPost("/api/lock_door");
+      if (res && res.error === "door_open") {
+        alert("Door is open, you can't lock it.");
+      }
       fetchState();
     });
   }
