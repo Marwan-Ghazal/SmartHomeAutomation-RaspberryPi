@@ -56,23 +56,27 @@ def main() -> None:
 
         if name == "LASER":
             on = bool(val)
-            laser.set(on)
+            print(f"[PERIPHERAL] CMD LASER on={on}")
+            try:
+                laser.set(on)
+            except Exception as e:
+                print(f"[PERIPHERAL] Laser.set failed (LASER cmd) on={on}: {e}")
             with state.lock:
                 state.laser_on = on
             return
 
         if name == "SAFETY_LASER":
             enabled = bool(val)
+            print(
+                f"[PERIPHERAL] CMD SAFETY_LASER enabled={enabled} pin={config.LASER_PIN} active_low={getattr(config, 'LASER_ACTIVE_LOW', False)}"
+            )
+            try:
+                laser.set(bool(enabled))
+            except Exception as e:
+                print(f"[PERIPHERAL] Laser.set failed (SAFETY_LASER cmd) enabled={enabled}: {e}")
             with state.lock:
                 state.safety_laser_enabled = enabled
-                if enabled:
-                    # Ensure the emitter turns on immediately, even if the sensor loop
-                    # errors out later.
-                    laser.set(True)
-                    state.laser_on = True
-                else:
-                    laser.set(False)
-                    state.laser_on = False
+                state.laser_on = enabled
             return
 
         if name == "WINDOW":
