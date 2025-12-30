@@ -277,14 +277,18 @@ def _ensure_mqtt_started() -> None:
 
 import base64
 
+_face_engine_import_error: Optional[str] = None
+
 try:
     from master_pi.ai.face_engine import engine as face_engine
 except ImportError as e:
     print(f"[WEB] Warning: Could not import face_engine. Face unlock will not work. Error: {e}")
     face_engine = None
+    _face_engine_import_error = str(e)
 except Exception as e:
     print(f"[WEB] Warning: Unexpected error importing face_engine: {e}")
     face_engine = None
+    _face_engine_import_error = str(e)
 
 @app.route("/api/face_check", methods=["POST"])
 def api_face_check():
@@ -293,7 +297,8 @@ def api_face_check():
     and opens the door if authorized.
     """
     if face_engine is None:
-        return jsonify({"authorized": False, "error": "Face engine not available"}), 503
+        detail = _face_engine_import_error or "Face engine not available"
+        return jsonify({"authorized": False, "error": "Face engine not available", "detail": detail}), 503
 
     try:
         body = request.get_json(silent=True) or {}
