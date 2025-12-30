@@ -8,6 +8,7 @@ SERIAL_RECONNECT_DELAY_SEC = 2.0
 # GPIO (BCM numbering)
 PIR_PIN = 5
 LASER_PIN = 12
+LASER_ACTIVE_LOW = False
 
 # DHT11 uses board pin naming via Blinka
 DHT_MODEL = "DHT11"

@@ -27,7 +27,7 @@ def main() -> None:
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
 
-    laser = Laser(config.LASER_PIN)
+    laser = Laser(config.LASER_PIN, active_low=config.LASER_ACTIVE_LOW)
     window = StepperWindow(config.STEPPER_PINS, config.STEPS_PER_REV, config.STEPPER_DELAY_SEC)
     laser.setup()
     window.setup()
