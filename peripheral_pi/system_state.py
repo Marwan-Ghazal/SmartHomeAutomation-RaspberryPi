@@ -12,6 +12,8 @@ class PeripheralState:
     humidity_pct: Optional[float] = None
     motion: bool = False
     flame_detected: bool = False
+    laser_beam_ok: bool = False
+    crossing_detected: bool = False
 
     # Master (remote)
     master_led_on: bool = False
@@ -19,6 +21,7 @@ class PeripheralState:
     # Actuators
     window_open: bool = False
     laser_on: bool = False
+    safety_laser_enabled: bool = False
 
     # For LCD / status
     alarm: bool = False

@@ -46,6 +46,9 @@ def api_state():
         "humidity": s.get("humidity_pct"),
         "motion": bool(s.get("motion", False)),
         "flame_detected": bool(s.get("flame_detected", False)),
+        "laser_beam_ok": bool(s.get("laser_beam_ok", False)),
+        "crossing_detected": bool(s.get("crossing_detected", False)),
+        "safety_laser_enabled": bool(s.get("safety_laser_enabled", False)),
         "sound_detected": bool(s.get("sound_detected", False)),
         "led_on": bool(s.get("led_on", False)),
         "buzzer_on": bool(s.get("buzzer_on", False)),
@@ -84,6 +87,9 @@ def api_stream():
                 "humidity": payload.get("humidity_pct"),
                 "motion": bool(payload.get("motion", False)),
                 "flame_detected": bool(payload.get("flame_detected", False)),
+                "laser_beam_ok": bool(payload.get("laser_beam_ok", False)),
+                "crossing_detected": bool(payload.get("crossing_detected", False)),
+                "safety_laser_enabled": bool(payload.get("safety_laser_enabled", False)),
                 "sound_detected": bool(payload.get("sound_detected", False)),
                 "led_on": bool(payload.get("led_on", False)),
                 "buzzer_on": bool(payload.get("buzzer_on", False)),
@@ -162,9 +168,9 @@ def api_toggle_laser():
     try:
         _ensure_mqtt_started()
         with _state_lock:
-            new_state = not bool(_latest_state.get("laser_on", False))
-        _mqtt_publish_cmd("peripheral/laser", {"on": new_state})
-        return jsonify({"laser_on": new_state})
+            new_state = not bool(_latest_state.get("safety_laser_enabled", False))
+        _mqtt_publish_cmd("peripheral/safety_laser", {"on": new_state})
+        return jsonify({"safety_laser_enabled": new_state})
     except Exception as e:
         print("ERROR in /api/toggle_laser:", e)
         return jsonify({"error": str(e)}), 500

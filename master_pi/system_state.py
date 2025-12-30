@@ -22,8 +22,11 @@ class SystemState:
     humidity_pct: Optional[float] = None
     motion: bool = False
     flame_detected: bool = False
+    laser_beam_ok: bool = False
+    crossing_detected: bool = False
     window_open: bool = False
     laser_on: bool = False
+    safety_laser_enabled: bool = False
     peripheral_alarm: bool = False
 
     # Derived / control flags
@@ -43,8 +46,11 @@ class SystemState:
             "humidity_pct": self.humidity_pct,
             "motion": self.motion,
             "flame_detected": self.flame_detected,
+            "laser_beam_ok": self.laser_beam_ok,
+            "crossing_detected": self.crossing_detected,
             "window_open": self.window_open,
             "laser_on": self.laser_on,
+            "safety_laser_enabled": self.safety_laser_enabled,
             "peripheral_alarm": self.peripheral_alarm,
             "alarm_active": self.alarm_active,
         }

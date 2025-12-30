@@ -24,6 +24,40 @@ def flame_loop(pin: int, on_flame: Callable[[bool], None], *, active_low: bool =
         time.sleep(poll_sec)
 
 
+class Mcp3008:
+    def __init__(self, bus: int = 0, device: int = 0, *, cs_pin: Optional[int] = None, max_speed_hz: int = 1350000):
+        import spidev
+
+        self._cs_pin = cs_pin
+        if self._cs_pin is not None:
+            GPIO.setup(self._cs_pin, GPIO.OUT, initial=GPIO.HIGH)
+
+        self._spi = spidev.SpiDev()
+        self._spi.open(bus, device)
+        self._spi.max_speed_hz = max_speed_hz
+        if self._cs_pin is not None:
+            self._spi.no_cs = True
+
+    def read_channel(self, channel: int) -> int:
+        if channel < 0 or channel > 7:
+            raise ValueError("MCP3008 channel must be 0..7")
+
+        if self._cs_pin is not None:
+            GPIO.output(self._cs_pin, GPIO.LOW)
+        try:
+            adc = self._spi.xfer2([1, (8 + channel) << 4, 0])
+            return ((adc[1] & 3) << 8) + adc[2]
+        finally:
+            if self._cs_pin is not None:
+                GPIO.output(self._cs_pin, GPIO.HIGH)
+
+    def close(self) -> None:
+        try:
+            self._spi.close()
+        except Exception:
+            pass
+
+
 def make_dht_reader(model: str, board_pin: str):
     import board
     import adafruit_dht

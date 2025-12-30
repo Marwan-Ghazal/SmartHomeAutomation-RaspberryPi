@@ -54,8 +54,11 @@ def main() -> None:
                 state.humidity_pct = msg.get("humidity_pct")
                 state.motion = bool(msg.get("motion", False))
                 state.flame_detected = bool(msg.get("flame_detected", False))
+                state.laser_beam_ok = bool(msg.get("laser_beam_ok", False))
+                state.crossing_detected = bool(msg.get("crossing_detected", False))
                 state.window_open = bool(msg.get("window_open", False))
                 state.laser_on = bool(msg.get("laser_on", False))
+                state.safety_laser_enabled = bool(msg.get("safety_laser_enabled", False))
                 state.peripheral_alarm = bool(msg.get("alarm", False))
             return
 
@@ -182,6 +185,14 @@ def main() -> None:
             on = obj.get("on")
             if isinstance(on, bool):
                 link.send({"t": "CMD", "name": "LASER", "value": on})
+            return
+
+        if path == "peripheral/safety_laser":
+            on = obj.get("on")
+            if isinstance(on, bool):
+                with state.lock:
+                    state.safety_laser_enabled = on
+                link.send({"t": "CMD", "name": "SAFETY_LASER", "value": on})
             return
 
         if path == "peripheral/alarm":

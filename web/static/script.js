@@ -84,11 +84,23 @@ function renderState(data) {
   const motionPill = document.getElementById("motion-pill");
   const soundPill = document.getElementById("sound-pill");
   const flamePill = document.getElementById("flame-pill");
+  const beamPill = document.getElementById("beam-pill");
   const alarmPill = document.getElementById("alarm-pill");
 
   updatePill(motionPill, data.motion, "Motion detected", "No motion");
   updatePill(soundPill, data.sound_detected, "Sound detected", "Quiet");
   if (flamePill) updatePill(flamePill, data.flame_detected, "FIRE!", "Safe", data.flame_detected);
+
+  if (beamPill) {
+    if (!data.safety_laser_enabled) {
+      updatePill(beamPill, false, "Disabled", "Disabled");
+    } else if (data.crossing_detected || !data.laser_beam_ok) {
+      updatePill(beamPill, true, "Crossing", "Beam OK", true);
+    } else {
+      updatePill(beamPill, true, "Beam OK", "Beam OK");
+    }
+  }
+
   updatePill(alarmPill, data.alarm_active, "Alarm active", "Inactive", data.alarm_active);
 
   if (data.flame_detected) {
@@ -113,12 +125,12 @@ function renderState(data) {
     btnLed.textContent = "LED: OFF";
   }
 
-  if (data.laser_on) {
+  if (data.safety_laser_enabled) {
     btnLaser.classList.add("btn-active");
-    btnLaser.textContent = "Laser: ON";
+    btnLaser.textContent = "Safety Laser: ON";
   } else {
     btnLaser.classList.remove("btn-active");
-    btnLaser.textContent = "Laser: OFF";
+    btnLaser.textContent = "Safety Laser: OFF";
   }
 
   if (swClap) swClap.checked = !!data.clap_toggle_enabled;
