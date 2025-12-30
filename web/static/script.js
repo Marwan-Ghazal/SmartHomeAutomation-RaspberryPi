@@ -325,6 +325,67 @@ function setupControls() {
   }
 }
 
+
+function setupFaceUnlock() {
+  const video = document.getElementById('video-feed');
+  const canvas = document.getElementById('capture-canvas');
+  const btnUnlock = document.getElementById('btn-face-unlock');
+  const statusText = document.getElementById('face-status');
+
+  if (!video || !btnUnlock) return;
+
+  // Request Camera
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(stream => {
+        video.srcObject = stream;
+      })
+      .catch(err => {
+        console.error("Camera access denied:", err);
+        statusText.innerText = "Camera access denied";
+        statusText.style.color = "red";
+      });
+  } else {
+    statusText.innerText = "Camera API not supported";
+  }
+
+  btnUnlock.addEventListener('click', async () => {
+    if (!video.srcObject) {
+      statusText.innerText = "Camera not ready";
+      return;
+    }
+
+    // Capture frame
+    const context = canvas.getContext('2d');
+    context.drawImage(video, 0, 0, 320, 240);
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    
+    statusText.innerText = "Verifying...";
+    statusText.style.color = "#888"; // reset color
+    
+    try {
+      const result = await apiPost('/api/face_check', { image: dataUrl });
+      
+      if (result.authorized) {
+        statusText.innerText = `Access GRANTED: ${result.name}`;
+        statusText.style.color = "green";
+      } else {
+        statusText.innerText = `Access DENIED: ${result.error || "Unknown"}`;
+        statusText.style.color = "red";
+      }
+    } catch (e) {
+      statusText.innerText = "Error connecting to server";
+      statusText.style.color = "red";
+    }
+    
+    // Reset status message after a few seconds
+    setTimeout(() => {
+        statusText.innerText = "Ready";
+        statusText.style.color = "#888";
+    }, 5000);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   setupControls();
   fetchState();

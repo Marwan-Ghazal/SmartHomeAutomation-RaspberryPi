@@ -120,6 +120,20 @@
       </div>
       <p class="hint">Clap toggle and sound mode cannot be active at the same time.</p>
     </section>
+
+    <!-- Face Unlock -->
+    <section class="card">
+      <h2>Face Unlock</h2>
+      <div class="face-unlock-container" style="text-align: center;">
+        <video id="video-feed" width="320" height="240" autoplay style="border: 2px solid #333; border-radius: 8px; background: #000;"></video>
+        <canvas id="capture-canvas" width="320" height="240" style="display: none;"></canvas>
+        
+        <div style="margin-top: 10px;">
+          <button id="btn-face-unlock" class="btn">Open with Face</button>
+        </div>
+        <p id="face-status" style="margin-top: 10px; font-weight: bold; color: #888;">Ready</p>
+      </div>
+    </section>
   </main>
 </div>
 

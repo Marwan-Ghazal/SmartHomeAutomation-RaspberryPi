@@ -271,6 +271,60 @@ def _ensure_mqtt_started() -> None:
         _mqtt_started = True
 
 
+
+import base64
+
+try:
+    from master_pi.ai.face_engine import engine as face_engine
+except ImportError as e:
+    print(f"[WEB] Warning: Could not import face_engine. Face unlock will not work. Error: {e}")
+    face_engine = None
+except Exception as e:
+    print(f"[WEB] Warning: Unexpected error importing face_engine: {e}")
+    face_engine = None
+
+@app.route("/api/face_check", methods=["POST"])
+def api_face_check():
+    """
+    Receives a captured frame (base64 encoded JPEG), verifies identity,
+    and opens the door if authorized.
+    """
+    if face_engine is None:
+        return jsonify({"authorized": False, "error": "Face engine not available"}), 503
+
+    try:
+        body = request.get_json(silent=True) or {}
+        image_data = body.get("image") # format: "data:image/jpeg;base64,..."
+
+        if not image_data:
+            return jsonify({"authorized": False, "error": "No image data"}), 400
+
+        # Parse base64
+        if "," in image_data:
+            header, encoded = image_data.split(",", 1)
+        else:
+            encoded = image_data
+
+        image_bytes = base64.b64decode(encoded)
+
+        # Verify Face
+        authorized, name = face_engine.verify_face(image_bytes)
+
+        if authorized:
+            print(f"[WEB] Face authorized: {name}. Unlocking door.")
+            _ensure_mqtt_started()
+            # Send OPEN command via MQTT
+            _mqtt_publish_cmd("peripheral/window", {"action": "OPEN"})
+            return jsonify({"authorized": True, "name": name})
+        
+        else:
+            print("[WEB] Face verification failed.")
+            return jsonify({"authorized": False, "error": "Access Denied"}), 200 # 200 OK but denied
+
+    except Exception as e:
+        print(f"[WEB] Error in /api/face_check: {e}")
+        return jsonify({"authorized": False, "error": str(e)}), 500
+
 if __name__ == "__main__":
     _ensure_mqtt_started()
     app.run(host="0.0.0.0", port=5000, debug=False)
