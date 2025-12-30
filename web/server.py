@@ -20,6 +20,9 @@ _MQTT_BASE_TOPIC = os.getenv(
     "SMARTHOME_MQTT_BASE_TOPIC", getattr(master_config, "MQTT_BASE_TOPIC", "smarthome")
 ).rstrip("/")
 
+_WEB_HOST = os.getenv("SMARTHOME_WEB_HOST", "0.0.0.0")
+_WEB_PORT = int(os.getenv("SMARTHOME_WEB_PORT", "5000"))
+
 _state_lock = threading.Lock()
 _latest_state: Dict[str, Any] = {}
 _state_version = 0
@@ -327,4 +330,4 @@ def api_face_check():
 
 if __name__ == "__main__":
     _ensure_mqtt_started()
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host=_WEB_HOST, port=_WEB_PORT, debug=False)
