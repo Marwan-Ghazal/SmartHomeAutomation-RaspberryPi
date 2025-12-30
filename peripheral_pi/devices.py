@@ -59,3 +59,17 @@ class StepperWindow:
 
     def close(self) -> None:
         self._rotate(self._steps_per_rev, direction=0)
+
+
+class DoorLock:
+    def __init__(self, pins: List[int], steps_per_rev: int, delay_sec: float):
+        self._stepper = StepperWindow(pins, steps_per_rev, delay_sec)
+
+    def setup(self) -> None:
+        self._stepper.setup()
+
+    def lock(self) -> None:
+        self._stepper.close()
+
+    def unlock(self) -> None:
+        self._stepper.open()

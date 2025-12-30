@@ -85,6 +85,7 @@ function renderState(data) {
   const soundPill = document.getElementById("sound-pill");
   const flamePill = document.getElementById("flame-pill");
   const beamPill = document.getElementById("beam-pill");
+  const doorPill = document.getElementById("door-pill");
   const alarmPill = document.getElementById("alarm-pill");
 
   updatePill(motionPill, data.motion, "Motion detected", "No motion");
@@ -101,6 +102,14 @@ function renderState(data) {
     }
   }
 
+  if (doorPill) {
+    if (data.door_closed) {
+      updatePill(doorPill, true, data.door_locked ? "Closed + Locked" : "Closed", "Open");
+    } else {
+      updatePill(doorPill, false, "Closed", "Open", true);
+    }
+  }
+
   updatePill(alarmPill, data.alarm_active, "Alarm active", "Inactive", data.alarm_active);
 
   if (data.flame_detected) {
@@ -112,6 +121,9 @@ function renderState(data) {
   // Buttons
   const btnLed = document.getElementById("btn-led");
   const btnLaser = document.getElementById("btn-laser");
+
+  const btnLockDoor = document.getElementById("btn-lock-door");
+  const btnUnlockDoor = document.getElementById("btn-unlock-door");
 
   const swClap = document.getElementById("sw-clap");
   const swSound = document.getElementById("sw-sound");
@@ -131,6 +143,18 @@ function renderState(data) {
   } else {
     btnLaser.classList.remove("btn-active");
     btnLaser.textContent = "Safety Laser: OFF";
+  }
+
+  if (btnLockDoor) {
+    btnLockDoor.disabled = !data.door_closed || !!data.door_locked;
+    if (data.door_locked) {
+      btnLockDoor.classList.add("btn-active");
+    } else {
+      btnLockDoor.classList.remove("btn-active");
+    }
+  }
+  if (btnUnlockDoor) {
+    btnUnlockDoor.disabled = !data.door_locked;
   }
 
   if (swClap) swClap.checked = !!data.clap_toggle_enabled;
@@ -218,8 +242,8 @@ function setupControls() {
   const btnLed = document.getElementById("btn-led");
   const btnLaser = document.getElementById("btn-laser");
   const btnStopBuzzer = document.getElementById("btn-stop-buzzer");
-  const btnOpenWindow = document.getElementById("btn-open-window");
-  const btnCloseWindow = document.getElementById("btn-close-window");
+  const btnLockDoor = document.getElementById("btn-lock-door");
+  const btnUnlockDoor = document.getElementById("btn-unlock-door");
 
   const btnFireClose = document.getElementById("btn-fire-close");
   if (btnFireClose) {
@@ -247,13 +271,19 @@ function setupControls() {
     fetchState();
   });
 
-  btnOpenWindow.addEventListener("click", async () => {
-    await apiPost("/api/open_window");
-  });
+  if (btnLockDoor) {
+    btnLockDoor.addEventListener("click", async () => {
+      await apiPost("/api/lock_door");
+      fetchState();
+    });
+  }
 
-  btnCloseWindow.addEventListener("click", async () => {
-    await apiPost("/api/close_window");
-  });
+  if (btnUnlockDoor) {
+    btnUnlockDoor.addEventListener("click", async () => {
+      await apiPost("/api/unlock_door");
+      fetchState();
+    });
+  }
 
   if (swClap) {
     swClap.addEventListener("change", async () => {

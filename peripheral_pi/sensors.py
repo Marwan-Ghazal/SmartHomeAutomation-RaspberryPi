@@ -24,6 +24,16 @@ def flame_loop(pin: int, on_flame: Callable[[bool], None], *, active_low: bool =
         time.sleep(poll_sec)
 
 
+def hall_loop(pin: int, on_closed, *, active_low: bool = True, poll_sec: float = 0.05) -> None:
+    pud = GPIO.PUD_UP if active_low else GPIO.PUD_DOWN
+    GPIO.setup(pin, GPIO.IN, pull_up_down=pud)
+    while True:
+        val = GPIO.input(pin)
+        closed = (val == 0) if active_low else (val == 1)
+        on_closed(bool(closed))
+        time.sleep(poll_sec)
+
+
 class Mcp3008:
     def __init__(self, bus: int = 0, device: int = 0, *, cs_pin: Optional[int] = None, max_speed_hz: int = 1350000):
         import spidev

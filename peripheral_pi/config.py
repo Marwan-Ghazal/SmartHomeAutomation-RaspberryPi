@@ -10,6 +10,10 @@ PIR_PIN = 5
 LASER_PIN = 12
 LASER_ACTIVE_LOW = False
 
+HALL_PIN = 6
+HALL_ACTIVE_LOW = True
+HALL_POLL_SEC = 0.05
+
 # DHT11 uses board pin naming via Blinka
 DHT_MODEL = "DHT11"
 DHT_BOARD_PIN = "D4"  # GPIO4

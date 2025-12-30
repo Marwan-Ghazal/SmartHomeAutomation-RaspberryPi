@@ -56,7 +56,8 @@ def main() -> None:
                 state.flame_detected = bool(msg.get("flame_detected", False))
                 state.laser_beam_ok = bool(msg.get("laser_beam_ok", False))
                 state.crossing_detected = bool(msg.get("crossing_detected", False))
-                state.window_open = bool(msg.get("window_open", False))
+                state.door_closed = bool(msg.get("door_closed", False))
+                state.door_locked = bool(msg.get("door_locked", False))
                 state.laser_on = bool(msg.get("laser_on", False))
                 state.safety_laser_enabled = bool(msg.get("safety_laser_enabled", False))
                 state.peripheral_alarm = bool(msg.get("alarm", False))
@@ -175,10 +176,10 @@ def main() -> None:
                     link.send({"t": "CMD", "name": "ALARM", "value": False})
             return
 
-        if path == "peripheral/window":
+        if path == "peripheral/door_lock":
             action = obj.get("action")
-            if action in {"OPEN", "CLOSE"}:
-                link.send({"t": "CMD", "name": "WINDOW", "value": action})
+            if action in {"LOCK", "UNLOCK"}:
+                link.send({"t": "CMD", "name": "DOOR_LOCK", "value": action})
             return
 
         if path == "peripheral/laser":
@@ -298,7 +299,6 @@ def main() -> None:
             state.alarm_active = True
 
         link.send({"t": "CMD", "name": "ALARM", "value": True})
-        link.send({"t": "CMD", "name": "WINDOW", "value": "OPEN"})
         threading.Thread(target=alarm_worker, daemon=True).start()
 
     last_flame = False
@@ -340,7 +340,7 @@ def main() -> None:
                 alarm_active = state.alarm_active
 
             if temp is not None and temp >= config.TEMP_HIGH_C and not alarm_active:
-                print(f"[AUTO] High temp {temp:.1f}C >= {config.TEMP_HIGH_C:.1f}C -> alarm + open window")
+                print(f"[AUTO] High temp {temp:.1f}C >= {config.TEMP_HIGH_C:.1f}C -> alarm")
                 ensure_alarm_started()
 
             time.sleep(0.05)

@@ -24,7 +24,8 @@ class SystemState:
     flame_detected: bool = False
     laser_beam_ok: bool = False
     crossing_detected: bool = False
-    window_open: bool = False
+    door_closed: bool = False
+    door_locked: bool = False
     laser_on: bool = False
     safety_laser_enabled: bool = False
     peripheral_alarm: bool = False
@@ -48,7 +49,8 @@ class SystemState:
             "flame_detected": self.flame_detected,
             "laser_beam_ok": self.laser_beam_ok,
             "crossing_detected": self.crossing_detected,
-            "window_open": self.window_open,
+            "door_closed": self.door_closed,
+            "door_locked": self.door_locked,
             "laser_on": self.laser_on,
             "safety_laser_enabled": self.safety_laser_enabled,
             "peripheral_alarm": self.peripheral_alarm,

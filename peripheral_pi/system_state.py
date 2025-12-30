@@ -14,12 +14,13 @@ class PeripheralState:
     flame_detected: bool = False
     laser_beam_ok: bool = False
     crossing_detected: bool = False
+    door_closed: bool = False
 
     # Master (remote)
     master_led_on: bool = False
 
     # Actuators
-    window_open: bool = False
+    door_locked: bool = False
     laser_on: bool = False
     safety_laser_enabled: bool = False
 

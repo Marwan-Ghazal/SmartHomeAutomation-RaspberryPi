@@ -8,9 +8,9 @@ from typing import Dict
 import RPi.GPIO as GPIO
 
 import config
-from devices import Laser, StepperWindow
+from devices import DoorLock, Laser
 from lcd import I2cLcd
-from sensors import Mcp3008, dht_loop, flame_loop, make_dht_reader, pir_loop
+from sensors import Mcp3008, dht_loop, flame_loop, hall_loop, make_dht_reader, pir_loop
 from system_state import state
 from uart_link import SerialLink
 
@@ -28,9 +28,9 @@ def main() -> None:
     GPIO.setmode(GPIO.BCM)
 
     laser = Laser(config.LASER_PIN, active_low=config.LASER_ACTIVE_LOW)
-    window = StepperWindow(config.STEPPER_PINS, config.STEPS_PER_REV, config.STEPPER_DELAY_SEC)
+    door_lock = DoorLock(config.STEPPER_PINS, config.STEPS_PER_REV, config.STEPPER_DELAY_SEC)
     laser.setup()
-    window.setup()
+    door_lock.setup()
 
     lcd = I2cLcd(config.I2C_ADDR, width=config.LCD_WIDTH)
     lcd.init()
@@ -79,11 +79,11 @@ def main() -> None:
                 state.laser_on = enabled
             return
 
-        if name == "WINDOW":
-            if val == "OPEN":
-                threading.Thread(target=_open_window, daemon=True).start()
-            elif val == "CLOSE":
-                threading.Thread(target=_close_window, daemon=True).start()
+        if name == "DOOR_LOCK":
+            if val == "LOCK":
+                threading.Thread(target=_lock_door, daemon=True).start()
+            elif val == "UNLOCK":
+                threading.Thread(target=_unlock_door, daemon=True).start()
             return
 
         if name == "ALARM":
@@ -99,15 +99,20 @@ def main() -> None:
     )
     link.start()
 
-    def _open_window() -> None:
-        window.open()
+    def _lock_door() -> None:
         with state.lock:
-            state.window_open = True
+            closed = bool(state.door_closed)
+        if not closed:
+            print("[DOOR] Refusing to lock: door is open")
+            return
+        door_lock.lock()
+        with state.lock:
+            state.door_locked = True
 
-    def _close_window() -> None:
-        window.close()
+    def _unlock_door() -> None:
+        door_lock.unlock()
         with state.lock:
-            state.window_open = False
+            state.door_locked = False
 
     def set_motion(motion: bool) -> None:
         changed = False
@@ -122,6 +127,12 @@ def main() -> None:
         with state.lock:
             state.flame_detected = bool(flame)
 
+    def set_door_closed(closed: bool) -> None:
+        with state.lock:
+            state.door_closed = bool(closed)
+            if not state.door_closed:
+                state.door_locked = False
+
     def set_dht(t_c, h_pct) -> None:
         with state.lock:
             if t_c is not None:
@@ -134,6 +145,12 @@ def main() -> None:
     adc = Mcp3008(config.SPI_BUS, config.SPI_DEVICE, cs_pin=config.LDR_CS_PIN)
 
     threading.Thread(target=pir_loop, args=(config.PIR_PIN, set_motion), daemon=True).start()
+    threading.Thread(
+        target=hall_loop,
+        args=(config.HALL_PIN, set_door_closed),
+        kwargs={"active_low": config.HALL_ACTIVE_LOW, "poll_sec": config.HALL_POLL_SEC},
+        daemon=True,
+    ).start()
     threading.Thread(target=dht_loop, args=(config.DHT_SAMPLE_SEC, dht_read_once, set_dht), daemon=True).start()
     threading.Thread(
         target=flame_loop,
@@ -232,14 +249,14 @@ def main() -> None:
                 h = state.humidity_pct
                 occ = "Occ" if state.motion else "Emp"
                 led = "LON" if state.master_led_on else "LOF"
-                win = "WON" if state.window_open else "WOF"
+                dor = "DCL" if state.door_closed else "DOP"
                 las = "LAS" if state.laser_on else "---"
                 alarm = "ALRT" if state.alarm else ""
 
             t_str = f"T:{t:.1f}C" if t is not None else "T:--.-C"
             h_str = f"H:{h:.0f}%" if h is not None else "H:--%"
             lcd.write_line(f"{t_str} {h_str}", I2cLcd.LCD_LINE_1)
-            lcd.write_line(f"{occ} {led} {win} {las} {alarm}", I2cLcd.LCD_LINE_2)
+            lcd.write_line(f"{occ} {led} {dor} {las} {alarm}", I2cLcd.LCD_LINE_2)
             time.sleep(config.LCD_UPDATE_SEC)
 
     def state_tx_loop() -> None:
@@ -255,7 +272,8 @@ def main() -> None:
                     "flame_detected": state.flame_detected,
                     "laser_beam_ok": state.laser_beam_ok,
                     "crossing_detected": state.crossing_detected,
-                    "window_open": state.window_open,
+                    "door_closed": state.door_closed,
+                    "door_locked": state.door_locked,
                     "laser_on": state.laser_on,
                     "safety_laser_enabled": state.safety_laser_enabled,
                     "alarm": state.alarm,

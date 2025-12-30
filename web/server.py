@@ -49,11 +49,12 @@ def api_state():
         "laser_beam_ok": bool(s.get("laser_beam_ok", False)),
         "crossing_detected": bool(s.get("crossing_detected", False)),
         "safety_laser_enabled": bool(s.get("safety_laser_enabled", False)),
+        "door_closed": bool(s.get("door_closed", False)),
+        "door_locked": bool(s.get("door_locked", False)),
         "sound_detected": bool(s.get("sound_detected", False)),
         "led_on": bool(s.get("led_on", False)),
         "buzzer_on": bool(s.get("buzzer_on", False)),
         "laser_on": bool(s.get("laser_on", False)),
-        "window_open": bool(s.get("window_open", False)),
         "alarm_active": bool(s.get("alarm_active", False)),
         "clap_toggle_enabled": bool(s.get("clap_toggle_enabled", True)),
         "sound_led_mode_enabled": bool(s.get("sound_led_mode_enabled", False)),
@@ -90,11 +91,12 @@ def api_stream():
                 "laser_beam_ok": bool(payload.get("laser_beam_ok", False)),
                 "crossing_detected": bool(payload.get("crossing_detected", False)),
                 "safety_laser_enabled": bool(payload.get("safety_laser_enabled", False)),
+                "door_closed": bool(payload.get("door_closed", False)),
+                "door_locked": bool(payload.get("door_locked", False)),
                 "sound_detected": bool(payload.get("sound_detected", False)),
                 "led_on": bool(payload.get("led_on", False)),
                 "buzzer_on": bool(payload.get("buzzer_on", False)),
                 "laser_on": bool(payload.get("laser_on", False)),
-                "window_open": bool(payload.get("window_open", False)),
                 "alarm_active": bool(payload.get("alarm_active", False)),
                 "clap_toggle_enabled": bool(payload.get("clap_toggle_enabled", True)),
                 "sound_led_mode_enabled": bool(payload.get("sound_led_mode_enabled", False)),
@@ -187,25 +189,29 @@ def api_stop_buzzer():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/open_window", methods=["POST"])
-def api_open_window():
+@app.route("/api/lock_door", methods=["POST"])
+def api_lock_door():
     try:
         _ensure_mqtt_started()
-        _mqtt_publish_cmd("peripheral/window", {"action": "OPEN"})
-        return jsonify({"status": "opening"})
+        with _state_lock:
+            closed = bool(_latest_state.get("door_closed", False))
+        if not closed:
+            return jsonify({"error": "door_open"}), 409
+        _mqtt_publish_cmd("peripheral/door_lock", {"action": "LOCK"})
+        return jsonify({"status": "locking"})
     except Exception as e:
-        print("ERROR in /api/open_window:", e)
+        print("ERROR in /api/lock_door:", e)
         return jsonify({"error": str(e)}), 500
 
 
-@app.route("/api/close_window", methods=["POST"])
-def api_close_window():
+@app.route("/api/unlock_door", methods=["POST"])
+def api_unlock_door():
     try:
         _ensure_mqtt_started()
-        _mqtt_publish_cmd("peripheral/window", {"action": "CLOSE"})
-        return jsonify({"status": "closing"})
+        _mqtt_publish_cmd("peripheral/door_lock", {"action": "UNLOCK"})
+        return jsonify({"status": "unlocking"})
     except Exception as e:
-        print("ERROR in /api/close_window:", e)
+        print("ERROR in /api/unlock_door:", e)
         return jsonify({"error": str(e)}), 500
 
 
