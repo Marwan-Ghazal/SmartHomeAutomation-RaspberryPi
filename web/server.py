@@ -326,8 +326,7 @@ def api_face_check():
         if authorized:
             print(f"[WEB] Face authorized: {name}. Unlocking door.")
             _ensure_mqtt_started()
-            # Send OPEN command via MQTT
-            _mqtt_publish_cmd("peripheral/window", {"action": "OPEN"})
+            _mqtt_publish_cmd("peripheral/door_lock", {"action": "UNLOCK"})
             return jsonify({"authorized": True, "name": name})
         
         else:

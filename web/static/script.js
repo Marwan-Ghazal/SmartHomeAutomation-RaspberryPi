@@ -132,7 +132,6 @@ function renderState(data) {
   const btnLaser = document.getElementById("btn-laser");
 
   const btnLockDoor = document.getElementById("btn-lock-door");
-  const btnUnlockDoor = document.getElementById("btn-unlock-door");
 
   const swClap = document.getElementById("sw-clap");
   const swSound = document.getElementById("sw-sound");
@@ -155,15 +154,12 @@ function renderState(data) {
   }
 
   if (btnLockDoor) {
-    btnLockDoor.disabled = !data.door_closed || !!data.door_locked;
-    if (data.door_locked) {
+    btnLockDoor.disabled = !data.door_closed || data.door_locked;
+    if (data.door_closed && !data.door_locked) {
       btnLockDoor.classList.add("btn-active");
     } else {
       btnLockDoor.classList.remove("btn-active");
     }
-  }
-  if (btnUnlockDoor) {
-    btnUnlockDoor.disabled = !data.door_locked;
   }
 
   if (swClap) swClap.checked = !!data.clap_toggle_enabled;
@@ -252,7 +248,6 @@ function setupControls() {
   const btnLaser = document.getElementById("btn-laser");
   const btnStopBuzzer = document.getElementById("btn-stop-buzzer");
   const btnLockDoor = document.getElementById("btn-lock-door");
-  const btnUnlockDoor = document.getElementById("btn-unlock-door");
 
   const btnFireClose = document.getElementById("btn-fire-close");
   if (btnFireClose) {
@@ -286,13 +281,6 @@ function setupControls() {
       if (res && res.error === "door_open") {
         alert("Door is open, you can't lock it.");
       }
-      fetchState();
-    });
-  }
-
-  if (btnUnlockDoor) {
-    btnUnlockDoor.addEventListener("click", async () => {
-      await apiPost("/api/unlock_door");
       fetchState();
     });
   }

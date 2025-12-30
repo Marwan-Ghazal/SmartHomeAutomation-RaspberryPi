@@ -167,6 +167,37 @@ body {
   margin-top: 6px;
 }
 
+.face-unlock-container {
+  text-align: center;
+}
+
+.face-video-wrap {
+  width: 100%;
+  max-width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.face-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.face-actions {
+  margin-top: 10px;
+}
+
+.face-status {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #888;
+}
+
 .toggle {
   display: inline-flex;
   align-items: center;

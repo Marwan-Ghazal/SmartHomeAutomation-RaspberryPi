@@ -78,7 +78,6 @@
       </div>
       <div class="button-row">
         <button id="btn-lock-door" class="btn">Lock Door</button>
-        <button id="btn-unlock-door" class="btn">Unlock Door</button>
       </div>
       <p class="hint">High temperature triggers alarm automatically.</p>
     </section>
@@ -124,14 +123,16 @@
     <!-- Face Unlock -->
     <section class="card">
       <h2>Face Unlock</h2>
-      <div class="face-unlock-container" style="text-align: center;">
-        <video id="video-feed" width="320" height="240" autoplay style="border: 2px solid #333; border-radius: 8px; background: #000;"></video>
+      <div class="face-unlock-container">
+        <div class="face-video-wrap">
+          <video id="video-feed" class="face-video" autoplay playsinline></video>
+        </div>
         <canvas id="capture-canvas" width="320" height="240" style="display: none;"></canvas>
         
-        <div style="margin-top: 10px;">
+        <div class="face-actions">
           <button id="btn-face-unlock" class="btn">Open with Face</button>
         </div>
-        <p id="face-status" style="margin-top: 10px; font-weight: bold; color: #888;">Ready</p>
+        <p id="face-status" class="face-status">Ready</p>
       </div>
     </section>
   </main>
