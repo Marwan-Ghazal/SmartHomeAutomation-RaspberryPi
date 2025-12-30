@@ -332,21 +332,31 @@ function setupFaceUnlock() {
   const btnUnlock = document.getElementById('btn-face-unlock');
   const statusText = document.getElementById('face-status');
 
-  if (!video || !btnUnlock) return;
+  if (!video || !btnUnlock || !statusText) return;
+
+  if (!window.isSecureContext && window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+    statusText.innerText = "Camera blocked: open this page on localhost or use HTTPS.";
+    statusText.style.color = "red";
+    return;
+  }
 
   // Request Camera
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-    navigator.mediaDevices.getUserMedia({ video: true })
+    statusText.innerText = "Starting camera...";
+    statusText.style.color = "#888";
+    navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } })
       .then(stream => {
         video.srcObject = stream;
+        return video.play();
       })
       .catch(err => {
         console.error("Camera access denied:", err);
-        statusText.innerText = "Camera access denied";
+        statusText.innerText = "Camera blocked/denied. Allow permission in the browser.";
         statusText.style.color = "red";
       });
   } else {
     statusText.innerText = "Camera API not supported";
+    statusText.style.color = "red";
   }
 
   btnUnlock.addEventListener('click', async () => {
@@ -388,6 +398,7 @@ function setupFaceUnlock() {
 
 document.addEventListener("DOMContentLoaded", () => {
   setupControls();
+  setupFaceUnlock();
   fetchState();
   const ok = startSseState();
   if (!ok) {
