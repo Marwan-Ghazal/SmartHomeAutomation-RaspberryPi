@@ -11,7 +11,7 @@ LASER_PIN = 12
 LASER_ACTIVE_LOW = False
 
 HALL_PIN = 6
-HALL_ACTIVE_LOW = True
+HALL_ACTIVE_LOW = False
 HALL_POLL_SEC = 0.05
 
 # DHT11 uses board pin naming via Blinka
@@ -33,7 +33,7 @@ LCD_UPDATE_SEC = 1.0
 STATE_HZ = 2.0  # 2-5 Hz
 
 FLAME_PIN = 16
-FLAME_ACTIVE_LOW = False
+FLAME_ACTIVE_LOW = True
 FLAME_POLL_SEC = 0.1
 
 SPI_BUS = 0
