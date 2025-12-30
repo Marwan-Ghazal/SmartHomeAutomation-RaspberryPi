@@ -105,12 +105,18 @@ def main() -> None:
         if not closed:
             print("[DOOR] Refusing to lock: door is open")
             return
-        door_lock.lock()
+        if getattr(config, "DOOR_LOCK_INVERT", False):
+            door_lock.unlock()
+        else:
+            door_lock.lock()
         with state.lock:
             state.door_locked = True
 
     def _unlock_door() -> None:
-        door_lock.unlock()
+        if getattr(config, "DOOR_LOCK_INVERT", False):
+            door_lock.lock()
+        else:
+            door_lock.unlock()
         with state.lock:
             state.door_locked = False
 

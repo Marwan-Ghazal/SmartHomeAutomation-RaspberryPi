@@ -14,6 +14,8 @@ HALL_PIN = 6
 HALL_ACTIVE_LOW = False
 HALL_POLL_SEC = 0.05
 
+DOOR_LOCK_INVERT = False
+
 # DHT11 uses board pin naming via Blinka
 DHT_MODEL = "DHT11"
 DHT_BOARD_PIN = "D4"  # GPIO4

@@ -106,7 +106,7 @@ function renderState(data) {
     if (data.door_closed) {
       updatePill(doorPill, true, data.door_locked ? "Closed + Locked" : "Closed", "Open");
     } else {
-      updatePill(doorPill, false, "Closed", "Open", true);
+      updatePill(doorPill, false, "Open", "Open", true);
     }
   }
 
