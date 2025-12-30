@@ -144,6 +144,7 @@ def main() -> None:
 
     def safety_laser_loop() -> None:
         baseline = None
+        last_beam_ok = False
         last_crossing = False
 
         while True:
@@ -154,6 +155,8 @@ def main() -> None:
                 if not enabled:
                     if baseline is not None:
                         baseline = None
+                    if last_beam_ok:
+                        last_beam_ok = False
                     if last_crossing:
                         last_crossing = False
 
@@ -171,18 +174,38 @@ def main() -> None:
                         state.laser_on = True
 
                 if baseline is None:
+                    # Calibration phase: don't report crossing yet.
+                    with state.lock:
+                        state.laser_beam_ok = False
+                        state.crossing_detected = False
+
                     samples = []
                     for _ in range(max(1, int(config.LDR_CALIB_SAMPLES))):
                         samples.append(adc.read_channel(config.LDR_CHANNEL))
                         time.sleep(max(0.001, float(config.LDR_POLL_SEC)))
                     baseline = sum(samples) / max(1, len(samples))
+                    last_beam_ok = False
 
                 reading = adc.read_channel(config.LDR_CHANNEL)
-                thr = float(baseline) * float(config.LDR_THRESHOLD_RATIO)
+                # Hysteresis avoids flicker and prevents 'beam ok forever' due to
+                # a low threshold ratio.
+                ratio = float(config.LDR_THRESHOLD_RATIO)
+                hysteresis = 0.05
+
                 if config.LDR_BEAM_HIGH:
-                    beam_ok = reading >= thr
+                    thr_on = float(baseline) * ratio
+                    thr_off = float(baseline) * max(0.0, ratio - hysteresis)
+                    if last_beam_ok:
+                        beam_ok = reading >= thr_off
+                    else:
+                        beam_ok = reading >= thr_on
                 else:
-                    beam_ok = reading <= thr
+                    thr_on = float(baseline) * ratio
+                    thr_off = float(baseline) * (ratio + hysteresis)
+                    if last_beam_ok:
+                        beam_ok = reading <= thr_off
+                    else:
+                        beam_ok = reading <= thr_on
 
                 crossing = enabled and (not beam_ok)
                 if crossing != last_crossing:
@@ -191,6 +214,7 @@ def main() -> None:
                     else:
                         print("[SECURITY] Beam restored")
                     last_crossing = crossing
+                last_beam_ok = bool(beam_ok)
 
                 with state.lock:
                     state.laser_beam_ok = bool(beam_ok)
