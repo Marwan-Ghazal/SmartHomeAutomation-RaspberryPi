@@ -65,6 +65,14 @@ def main() -> None:
             enabled = bool(val)
             with state.lock:
                 state.safety_laser_enabled = enabled
+                if enabled:
+                    # Ensure the emitter turns on immediately, even if the sensor loop
+                    # errors out later.
+                    laser.set(True)
+                    state.laser_on = True
+                else:
+                    laser.set(False)
+                    state.laser_on = False
             return
 
         if name == "WINDOW":
@@ -135,57 +143,59 @@ def main() -> None:
         last_crossing = False
 
         while True:
-            with state.lock:
-                enabled = bool(state.safety_laser_enabled)
+            try:
+                with state.lock:
+                    enabled = bool(state.safety_laser_enabled)
 
-            if not enabled:
-                if baseline is not None:
-                    baseline = None
-                if last_crossing:
-                    last_crossing = False
+                if not enabled:
+                    if baseline is not None:
+                        baseline = None
+                    if last_crossing:
+                        last_crossing = False
+
+                    with state.lock:
+                        state.laser_beam_ok = False
+                        state.crossing_detected = False
+
+                    time.sleep(0.1)
+                    continue
+
+                # Keep forcing the emitter on while enabled.
+                with state.lock:
+                    if not state.laser_on:
+                        laser.set(True)
+                        state.laser_on = True
+
+                if baseline is None:
+                    samples = []
+                    for _ in range(max(1, int(config.LDR_CALIB_SAMPLES))):
+                        samples.append(adc.read_channel(config.LDR_CHANNEL))
+                        time.sleep(max(0.001, float(config.LDR_POLL_SEC)))
+                    baseline = sum(samples) / max(1, len(samples))
+
+                reading = adc.read_channel(config.LDR_CHANNEL)
+                thr = float(baseline) * float(config.LDR_THRESHOLD_RATIO)
+                if config.LDR_BEAM_HIGH:
+                    beam_ok = reading >= thr
+                else:
+                    beam_ok = reading <= thr
+
+                crossing = enabled and (not beam_ok)
+                if crossing != last_crossing:
+                    if crossing:
+                        print("[SECURITY] Someone is crossing (laser beam interrupted)")
+                    else:
+                        print("[SECURITY] Beam restored")
+                    last_crossing = crossing
 
                 with state.lock:
-                    if state.laser_on:
-                        laser.set(False)
-                        state.laser_on = False
-                    state.laser_beam_ok = False
-                    state.crossing_detected = False
+                    state.laser_beam_ok = bool(beam_ok)
+                    state.crossing_detected = bool(crossing)
 
-                time.sleep(0.1)
-                continue
-
-            with state.lock:
-                if not state.laser_on:
-                    laser.set(True)
-                    state.laser_on = True
-
-            if baseline is None:
-                samples = []
-                for _ in range(max(1, int(config.LDR_CALIB_SAMPLES))):
-                    samples.append(adc.read_channel(config.LDR_CHANNEL))
-                    time.sleep(max(0.001, float(config.LDR_POLL_SEC)))
-                baseline = sum(samples) / max(1, len(samples))
-
-            reading = adc.read_channel(config.LDR_CHANNEL)
-            thr = float(baseline) * float(config.LDR_THRESHOLD_RATIO)
-            if config.LDR_BEAM_HIGH:
-                beam_ok = reading >= thr
-            else:
-                beam_ok = reading <= thr
-
-            crossing = enabled and (not beam_ok)
-            if crossing != last_crossing:
-                if crossing:
-                    print("[SECURITY] Someone is crossing (laser beam interrupted)")
-                else:
-                    print("[SECURITY] Beam restored")
-                last_crossing = crossing
-
-            with state.lock:
-                state.laser_beam_ok = bool(beam_ok)
-                state.crossing_detected = bool(crossing)
-
-            time.sleep(max(0.01, float(config.LDR_POLL_SEC)))
+                time.sleep(max(0.01, float(config.LDR_POLL_SEC)))
+            except Exception as e:
+                print(f"[SECURITY] Safety laser loop error: {e}")
+                time.sleep(0.2)
 
     def lcd_loop() -> None:
         while True:
