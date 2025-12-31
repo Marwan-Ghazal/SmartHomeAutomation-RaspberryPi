@@ -246,7 +246,6 @@ async function fetchState() {
 function setupControls() {
   const btnLed = document.getElementById("btn-led");
   const btnLaser = document.getElementById("btn-laser");
-  const btnStopBuzzer = document.getElementById("btn-stop-buzzer");
   const btnLockDoor = document.getElementById("btn-lock-door");
 
   const btnFireClose = document.getElementById("btn-fire-close");
@@ -267,11 +266,6 @@ function setupControls() {
 
   btnLaser.addEventListener("click", async () => {
     await apiPost("/api/toggle_laser");
-    fetchState();
-  });
-
-  btnStopBuzzer.addEventListener("click", async () => {
-    await apiPost("/api/stop_buzzer");
     fetchState();
   });
 
